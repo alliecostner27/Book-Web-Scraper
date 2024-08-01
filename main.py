@@ -1,14 +1,24 @@
+from flask import Flask, render_template, request
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+app = Flask(__name__)
+
 current_page = 1
+data = []
 proceed = True
 
-while(proceed):
-    url = 'https://books.toscrape.com/catalogue/page-'+str(current_page)+'.html'
-    page = requests.get(url)
-    soup = BeautifulSoup(page.text,"html.parser")
+@app.route("/")
+def index():
+    return render_template('index.html')
+
+def scrape():
+    while(proceed):
+        print("Currenly scraping page: " + str(current_page))
+        url = 'https://books.toscrape.com/catalogue/page-'+str(current_page)+'.html'
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text,"html.parser")
 
     if soup.title.text == "404 Not Found":
         proceed = False
@@ -24,10 +34,13 @@ while(proceed):
 
             item['Price'] = book.find("p", class_= "price_color").text[2:]
 
-            item['Stock'] = book.find("p", class_="instock availability")
+            item['Stock'] = book.find("p", class_="instock availability").text.strip()
 
-            print(item['Price'])
-            print(item['Stock'])
+            data.append(item)
         
     current_page += 1
-    proceed = False
+    return render_template('index.html')
+
+app.run(debug=True)   
+df = pd.DataFrame(data)
+df.to_csv("books.csv")
